@@ -9,18 +9,18 @@ from PIL import Image
 from sklearn.model_selection import train_test_split
 from keras.applications.xception import Xception
 from keras.models import Model, load_model
-from keras.layers.core import Dense
-from keras.layers.pooling import GlobalAveragePooling2D
+from keras.layers import Dense
+from keras.layers import GlobalAveragePooling2D
 from keras.optimizers import Adam, RMSprop, SGD
-from keras.utils.np_utils import to_categorical
+from keras.utils import to_categorical
 from keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard, ReduceLROnPlateau
-from keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 image_size = 10
 classes = ["male", "female"]
 num_classes = len(classes)
 
-dir_path="part2"
+dir_path="part1"
 #%%time
 # ZIP読み込み
 imgfiles = os.listdir(dir_path)
@@ -43,21 +43,29 @@ for imgfile in imgfiles:
     # 画像から配列に変換
     data = np.asarray(image)
     file = os.path.basename(imgfile)
+    #print(file)
     file_split = [i for i in file.split('_')]
+    #print(file_split)
     X.append(data)
     Y.append(file_split[1])
+    if(file_split[1]=='3'):
+        print(imgfile)
     image.close()
 del imgfiles
+#print(Y)
+#print(Y.count(0),Y.count(1))
 
 X = np.array(X)
 Y = np.array(Y)
 print(X.shape, Y.shape)
-
+#print(np.count_nonzero(Y == '0'))
+#print(np.count_nonzero(Y == '1'))
+#print(np.unique(Y))
 # trainデータとtestデータに分割
 X_train, X_test, y_train, y_test = train_test_split(
     X, Y,
     random_state = 0,
-    stratify = Y,
+    stratify = None,
     test_size = 0.2
 )
 del X,Y
@@ -67,8 +75,8 @@ print(X_train.shape, y_train.shape, X_test.shape, y_test.shape)
 X_train = X_train.astype('float32') / 255
 X_test = X_test.astype('float32') / 255
 # one-hot変換
-y_train = to_categorical(y_train, num_classes = num_classes)
-y_test = to_categorical(y_test, num_classes = num_classes)
+y_train = to_categorical(y_train, num_classes = 2)
+y_test = to_categorical(y_test, num_classes = 2)
 
 # trainデータからvalidデータを分割
 X_train, X_valid, y_train, y_valid = train_test_split(
@@ -114,12 +122,12 @@ early_stopping = EarlyStopping(
 weights_dir = './weights/'
 if os.path.exists(weights_dir) == False:os.mkdir(weights_dir)
 model_checkpoint = ModelCheckpoint(
-    weights_dir + "val_loss{val_loss:.3f}.hdf5",
+    weights_dir + "val_loss{val_loss:.3f}.weights.h5",
     monitor = 'val_loss',
     verbose = 1,
     save_best_only = True,
     save_weights_only = True,
-    period = 3
+    save_freq = 2
 )
 
 # reduce learning rate
@@ -158,7 +166,7 @@ model.compile(
 )
 
 #%%time
-hist = model.fit_generator(
+hist = model.fit(
     datagen.flow(X_train, y_train, batch_size = 2),
     steps_per_epoch = X_train.shape[0] // 2,
     epochs = 50,
