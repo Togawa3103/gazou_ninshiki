@@ -1,3 +1,4 @@
+
 # coding: utf-8
 import numpy as np
 import pandas as pd
@@ -16,7 +17,7 @@ from keras.utils import to_categorical
 from keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard, ReduceLROnPlateau
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
-image_size = 10
+image_size = 100
 classes = ["male", "female"]
 num_classes = len(classes)
 
@@ -127,7 +128,7 @@ model_checkpoint = ModelCheckpoint(
     verbose = 1,
     save_best_only = True,
     save_weights_only = True,
-    save_freq = 2
+    save_freq = 10
 )
 
 # reduce learning rate
@@ -167,21 +168,21 @@ model.compile(
 
 #%%time
 hist = model.fit(
-    datagen.flow(X_train, y_train, batch_size = 2),
-    steps_per_epoch = X_train.shape[0] // 2,
+    datagen.flow(X_train, y_train, batch_size = 64),
+    steps_per_epoch = X_train.shape[0] //64,
     epochs = 50,
     validation_data = (X_valid, y_valid),
     callbacks = [early_stopping, reduce_lr],
     shuffle = True,
     verbose = 1
 )
-
+print(hist.history.keys())
 plt.figure(figsize = (18,6))
 
 # accuracy
 plt.subplot(1, 2, 1)
-plt.plot(hist.history["acc"], label = "acc", marker = "o")
-plt.plot(hist.history["val_acc"], label = "val_acc", marker = "o")
+plt.plot(hist.history["accuracy"], label = "acc", marker = "o")
+plt.plot(hist.history["val_accuracy"], label = "val_acc", marker = "o")
 #plt.xticks(np.arange())
 #plt.yticks(np.arange())
 plt.xlabel("epoch")
@@ -202,7 +203,7 @@ plt.ylabel("loss")
 plt.legend(loc = "best")
 plt.grid(color = 'gray', alpha = 0.2)
 
-plt.show()
+plt.savefig("accuracy_loss.png")
 
 score = model.evaluate(X_test, y_test, verbose = 1)
 print("evaluate loss: {[0]:.4f}".format(score))
@@ -217,27 +218,27 @@ model.save(model_dir + 'model.hdf5')
 model.save(model_dir + 'model-opt.hdf5', include_optimizer = False)
 
 # testデータ30件の正解ラベル
-true_classes = np.argmax(y_test[0:2], axis = 1)
+true_classes = np.argmax(y_test[0:30], axis = 1)
 
 # testデータ30件の画像と正解ラベルを出力
 plt.figure(figsize = (16, 6))
-for i in range(2):
+for i in range(30):
     plt.subplot(3, 10, i + 1)
     plt.axis("off")
     plt.title(classes[true_classes[i]])
     plt.imshow(X_test[i])
-plt.show()
+plt.savefig("test.png")
 
 # testデータ30件の予測ラベル
-pred_classes = np.argmax(model.predict(X_test[0:2]), axis = 1)
+pred_classes = np.argmax(model.predict(X_test[0:30]), axis = 1)
 
 # testデータ30件の予測確率
-pred_probs = np.max(model.predict(X_test[0:2]), axis = 1)
+pred_probs = np.max(model.predict(X_test[0:30]), axis = 1)
 pred_probs = ['{:.4f}'.format(i) for i in pred_probs]
 
 # testデータ30件の画像と予測ラベル・予測確率を出力
 plt.figure(figsize = (16, 6))
-for i in range(2):
+for i in range(30):
     plt.subplot(3, 10, i + 1)
     plt.axis("off")
     if pred_classes[i] == true_classes[i]:
@@ -245,5 +246,5 @@ for i in range(2):
     else:
         plt.title(classes[pred_classes[i]]+'\n'+pred_probs[i], color = "red")
     plt.imshow(X_test[i])
-plt.show()
+plt.savefig("result.png")
 
